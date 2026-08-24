@@ -258,7 +258,7 @@
     </div>
 
     <script>
-        // 1. Firebase Initialization (แก้ไข apiKey ตัวเต็มถูกต้องเรียบร้อย)
+        // 1. Firebase Initialization
         const firebaseConfig = {
             apiKey: "AIzaSyDkHJIhcX2KUOvgZbQ7Y5mBuAoKzL20Zsk",
             authDomain: "classroom-sound-monitor.firebaseapp.com",
@@ -338,14 +338,14 @@
                 document.getElementById('email').value = '';
                 document.getElementById('password').value = '';
                 
-                database.ref('sound_level').off();
-                database.ref('threshold').off();
+                database.ref('classroom_sound/sound_level').off();
+                database.ref('classroom_sound/threshold').off();
             });
         }
 
-        // 4. Firebase Realtime Data Listener
+        // 4. Firebase Realtime Data Listener (ปรับปรุง Path เป็น classroom_sound/)
         function listenFirebaseData() {
-            database.ref('sound_level').on('value', (snapshot) => {
+            database.ref('classroom_sound/sound_level').on('value', (snapshot) => {
                 const val = Number(snapshot.val());
                 if (!isNaN(val)) {
                     const elem = document.getElementById('soundLevel');
@@ -356,7 +356,7 @@
                 }
             });
 
-            database.ref('threshold').on('value', (snapshot) => {
+            database.ref('classroom_sound/threshold').on('value', (snapshot) => {
                 const val = Number(snapshot.val());
                 if (!isNaN(val)) {
                     currentThresholdVal = val;
@@ -369,7 +369,7 @@
             const val = document.getElementById('newThreshold').value;
             if(!val) return alert("กรุณากรอกตัวเลขเดซิเบล");
             
-            database.ref('threshold').set(parseInt(val))
+            database.ref('classroom_sound/threshold').set(parseInt(val))
             .then(() => {
                 alert("อัปเดตเกณฑ์แจ้งเตือนเรียบร้อยแล้ว!");
                 document.getElementById('newThreshold').value = '';
