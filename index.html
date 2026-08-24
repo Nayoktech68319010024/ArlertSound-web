@@ -258,9 +258,16 @@
     </div>
 
     <script>
-        // 1. Firebase Initialization
+        // 1. Firebase Initialization (ใส่ค่าคอนฟิกจากภาพเรียบร้อย)
         const firebaseConfig = {
-            databaseURL: "https://classroom-sound-monitor-default-rtdb.asia-southeast1.firebasedatabase.app/"
+            apiKey: "AIzaSyDkHJIhcX2KUOvgZbQ7Y5mBuAoKzl2OZsk",
+            authDomain: "classroom-sound-monitor.firebaseapp.com",
+            databaseURL: "https://classroom-sound-monitor-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "classroom-sound-monitor",
+            storageBucket: "classroom-sound-monitor.firebasestorage.app",
+            messagingSenderId: "662174946516",
+            appId: "1:662174946516:web:c09269a562b181bd211741",
+            measurementId: "G-GQCTWBJWFJ"
         };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
