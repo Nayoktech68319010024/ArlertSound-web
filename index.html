@@ -290,8 +290,8 @@
         let currentThresholdVal = 85;
         const timeSlots = [
             "08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00",
-            "12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00", "16:00 - 17:00",
-            "17:00 - 18:00"
+            "12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00", "15:00 - 16:00",
+            "16:00 - 17:00", "17:00 - 18:00"
         ];
         let hourlyDataHistory = {};
 
@@ -323,7 +323,19 @@
             }
         });
 
-        // 3. Firebase Authentication Functions
+        // 3. Firebase Authentication Handlers
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                document.getElementById('currentTeacherText').innerText = "ผู้สอน: " + user.email;
+                document.getElementById('loginOverlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('loginOverlay').style.visibility = 'hidden', 500);
+            } else {
+                document.getElementById('loginOverlay').style.visibility = 'visible';
+                document.getElementById('loginOverlay').style.opacity = '1';
+                document.getElementById('currentTeacherText').innerText = "ผู้สอน: --";
+            }
+        });
+
         function login() {
             const email = document.getElementById('email').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -331,15 +343,6 @@
             if(!email || !pass) return alert("กรุณากรอก Email และ Password");
 
             auth.signInWithEmailAndPassword(email, pass)
-                .then((userCredential) => {
-                    const user = userCredential.user;
-                    document.getElementById('currentTeacherText').innerText = "ผู้สอน: " + user.email;
-                    document.getElementById('loginOverlay').style.opacity = '0';
-                    setTimeout(() => document.getElementById('loginOverlay').style.visibility = 'hidden', 500);
-                    
-                    initHistoryTable();
-                    listenFirebaseData();
-                })
                 .catch((error) => {
                     alert("เข้าสู่ระบบไม่สำเร็จ: " + error.message);
                 });
@@ -347,18 +350,12 @@
 
         function logout() {
             auth.signOut().then(() => {
-                document.getElementById('loginOverlay').style.visibility = 'visible';
-                document.getElementById('loginOverlay').style.opacity = '1';
                 document.getElementById('email').value = '';
                 document.getElementById('password').value = '';
-                
-                database.ref('classroom_sound/sound_level').off();
-                database.ref('sound_level').off();
-                database.ref('classroom_sound/threshold').off();
             });
         }
 
-        // 4. Multi-path Listener (ตรวจจับอัตโนมัติทั้งแบบซ้อนโฟลเดอร์และแบบหน้าแรก)
+        // 4. Multi-path Real-time Listener
         function listenFirebaseData() {
             const handleSoundVal = (snapshot) => {
                 const rawVal = snapshot.val();
@@ -374,12 +371,10 @@
                 }
             };
 
-            // ดึงจาก classroom_sound/sound_level
+            // ดึงข้อมูล Realtime อัตโนมัติจาก Firebase
             database.ref('classroom_sound/sound_level').on('value', handleSoundVal);
-            // สำรอง: ดึงจาก sound_level หน้าแรก
             database.ref('sound_level').on('value', handleSoundVal);
 
-            // ดึงเกณฑ์แจ้งเตือน
             database.ref('classroom_sound/threshold').on('value', (snapshot) => {
                 const rawVal = snapshot.val();
                 if (rawVal !== null && rawVal !== undefined) {
@@ -387,6 +382,7 @@
                     if (!isNaN(val)) {
                         currentThresholdVal = val;
                         document.getElementById('currentThreshold').innerText = val;
+                        initHistoryTable();
                     }
                 }
             });
@@ -399,14 +395,13 @@
             const numVal = parseInt(val);
             database.ref('classroom_sound/threshold').set(numVal)
             .then(() => {
-                database.ref('threshold').set(numVal); // อัปเดตสำรอง
+                database.ref('threshold').set(numVal);
                 alert("อัปเดตเกณฑ์แจ้งเตือนเรียบร้อยแล้ว!");
                 document.getElementById('newThreshold').value = '';
             })
             .catch(err => alert("เกิดข้อผิดพลาดในการบันทึก: " + err.message));
         }
 
-        // ฟังก์ชันกดปุ่มสุ่มค่าเสียงทดสอบ (จะส่งขึ้น Firebase จริงๆ)
         function simulateSoundData() {
             const randomDb = Math.floor(Math.random() * (95 - 55 + 1)) + 55;
             database.ref('classroom_sound/sound_level').set(randomDb);
@@ -426,7 +421,8 @@
                 if (currentHour >= slotHour) {
                     dbVal = hourlyDataHistory[slot] || "--";
                     if (dbVal !== "--") {
-                        statusHtml = (dbVal > currentThresholdVal) 
+                        const numDb = parseFloat(dbVal);
+                        statusHtml = (numDb > currentThresholdVal) 
                             ? `<span class="status-warn">⚠️ เสียงดังเกินเกณฑ์</span>` 
                             : `<span class="status-normal">✓ ปกติ</span>`;
                     } else {
@@ -473,7 +469,7 @@
                 const val = hourlyDataHistory[slot] || "N/A";
                 let status = "ยังไม่ถึงเวลา";
                 if(val !== "N/A") {
-                    status = val > currentThresholdVal ? "เสียงดังเกินเกณฑ์" : "ปกติ";
+                    status = parseFloat(val) > currentThresholdVal ? "เสียงดังเกินเกณฑ์" : "ปกติ";
                 }
                 csvContent += `"${slot}","${val}","${status}"\n`;
             });
@@ -485,6 +481,10 @@
             link.click();
             document.body.removeChild(link);
         }
+
+        // เริ่มต้นการฟังข้อมูลจาก Firebase ทันทีเมื่อโหลดหน้าเว็บ
+        initHistoryTable();
+        listenFirebaseData();
     </script>
 </body>
 </html>
