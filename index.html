@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundGuard - Daily History IoT Dashboard</title>
+    <!-- Google Fonts, Chart.js & Firebase SDK (App, Database, Auth) -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(18, 26, 43, 0.7);
+            --neon-blue: #00f3ff;
+            --neon-green: #00ff66;
+            --neon-red: #ff0055;
+            --neon-yellow: #ffcc00;
+            --text-color: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(0, 243, 255, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(0, 255, 102, 0.05) 0%, transparent 20%);
+        }
+        #loginOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 15, 25, 0.95);
+            backdrop-filter: blur(15px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease, visibility 0.5s;
+        }
+        .login-box {
+            background: var(--card-bg);
+            border: 1px solid var(--neon-blue);
+            border-radius: 16px;
+            padding: 40px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.2);
+            text-align: center;
+        }
+        .login-box h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: #fff;
+            margin-bottom: 25px;
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+        .input-field {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            color: #fff;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            outline: none;
+        }
+        .input-field:focus {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+        }
+        .btn-login {
+            width: 100%;
+            background: linear-gradient(45deg, #0088ff, var(--neon-blue));
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: 700;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+        .btn-login:hover {
+            box-shadow: 0 0 15px var(--neon-blue);
+            transform: scale(1.02);
+        }
+        header {
+            width: 100%;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            color: #fff;
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-badge {
+            font-size: 0.9rem;
+            color: var(--neon-green);
+            background: rgba(0, 255, 102, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--neon-green);
+        }
+        .btn-logout {
+            background: rgba(255, 0, 85, 0.2);
+            border: 1px solid var(--neon-red);
+            color: var(--neon-red);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: 0.3s;
+        }
+        .btn-logout:hover { background: var(--neon-red); color: #fff; }
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 30px auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            border-radius: 16px;
+            padding: 25px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .card-full { grid-column: span 2; }
+        .card h3 {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .display-val {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--neon-green);
+            text-shadow: 0 0 15px var(--neon-green);
+            margin: 10px 0;
+        }
+        .input-group { display: flex; gap: 10px; margin-top: 15px; }
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .history-table th, .history-table td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+        }
+        .history-table th { color: var(--neon-blue); font-family: 'Orbitron', sans-serif; font-weight: 600; }
+        .status-normal { color: var(--neon-green); }
+        .status-warn { color: var(--neon-red); font-weight: bold; }
+        .status-idle { color: #64748b; }
+        .btn-export {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.3s;
+        }
+        .btn-export:hover { background: var(--neon-blue); color: #000; }
+        @media (max-width: 768px) {
+            header { flex-direction: column; gap: 10px; }
+            .container { grid-template-columns: 1fr; }
+            .card-full { grid-column: span 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- LOGIN OVERLAY -->
+    <div id="loginOverlay">
+        <div class="login-box">
+            <h2>TEACHER LOGIN</h2>
+            <input type="email" id="email" class="input-field" placeholder="อีเมล (Email)">
+            <input type="password" id="password" class="input-field" placeholder="รหัสผ่าน (Password)">
+            <button class="btn-login" onclick="login()">เข้าสู่ระบบ</button>
+        </div>
+    </div>
+
+    <!-- MAIN HEADER -->
+    <header>
+        <h1>SOUNDGUARD MONITOR</h1>
+        <div class="user-info">
+            <span class="user-badge" id="currentTeacherText">ผู้สอน: --</span>
+            <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <div class="container">
+        <!-- Real-time Sound Display -->
+        <div class="card">
+            <h3>ระดับเสียงปัจจุบัน (REAL-TIME)</h3>
+            <div class="display-val" id="soundLevel">--</div>
+            <p style="color: #64748b;">หน่วยวัด: เดซิเบล (dB)</p>
+        </div>
+
+        <!-- Threshold Control -->
+        <div class="card">
+            <h3>เกณฑ์แจ้งเตือน (THRESHOLD)</h3>
+            <p style="margin-bottom: 10px;">ขีดจำกัดปัจจุบัน: <span id="currentThreshold" style="font-family: 'Orbitron'; color: var(--neon-blue); font-size: 1.2rem;">--</span> dB</p>
+            <div class="input-group">
+                <input type="number" id="newThreshold" class="input-field" style="margin:0;" min="30" max="120" placeholder="ตั้งค่า dB">
+                <button class="btn-login" style="width: auto;" onclick="updateThreshold()">บันทึก</button>
+            </div>
+        </div>
+
+        <!-- Real-time Chart -->
+        <div class="card card-full">
+            <h3>แนวโน้มระดับเสียง (REAL-TIME CHART)</h3>
+            <canvas id="soundChart" height="100"></canvas>
+        </div>
+
+        <!-- Daily History Log Table -->
+        <div class="card card-full">
+            <h3>
+                <span>รายงานประวัติระดับเสียงประจำวัน (08:00 - 18:00 น.)</span>
+                <button class="btn-export" onclick="exportToCSV()">📥 ส่งออกไฟล์ Excel (.CSV)</button>
+            </h3>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>ช่วงเวลา</th>
+                        <th>ระดับเสียงเฉลี่ย (dB)</th>
+                        <th>สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 1. Firebase Initialization
+        const firebaseConfig = {
+            databaseURL: "https://classroom-sound-monitor-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+
+        let currentThresholdVal = 85;
+        const timeSlots = [
+            "08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00",
+            "12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00", "15:00 - 16:00",
+            "16:00 - 17:00", "17:00 - 18:00"
+        ];
+        let hourlyDataHistory = {};
+
+        // 2. Chart.js Setup
+        const ctx = document.getElementById('soundChart').getContext('2d');
+        const soundChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'ระดับเสียง (dB)',
+                    data: [],
+                    borderColor: '#00f3ff',
+                    backgroundColor: 'rgba(0, 243, 255, 0.15)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#00f3ff'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#64748b' } },
+                    y: { min: 30, max: 120, grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#64748b' } }
+                },
+                plugins: { legend: { labels: { color: '#e2e8f0' } } }
+            }
+        });
+
+        // 3. Firebase Authentication Functions
+        function login() {
+            const email = document.getElementById('email').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            
+            if(!email || !pass) return alert("กรุณากรอก Email และ Password");
+
+            auth.signInWithEmailAndPassword(email, pass)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    document.getElementById('currentTeacherText').innerText = "ผู้สอน: " + user.email;
+                    document.getElementById('loginOverlay').style.opacity = '0';
+                    setTimeout(() => document.getElementById('loginOverlay').style.visibility = 'hidden', 500);
+                    
+                    initHistoryTable();
+                    listenFirebaseData();
+                })
+                .catch((error) => {
+                    alert("เข้าสู่ระบบไม่สำเร็จ: " + error.message);
+                });
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                document.getElementById('loginOverlay').style.visibility = 'visible';
+                document.getElementById('loginOverlay').style.opacity = '1';
+                document.getElementById('email').value = '';
+                document.getElementById('password').value = '';
+                
+                database.ref('sound_level').off();
+                database.ref('threshold').off();
+            });
+        }
+
+        // 4. Firebase Realtime Data Listener
+        function listenFirebaseData() {
+            database.ref('sound_level').on('value', (snapshot) => {
+                const val = Number(snapshot.val());
+                if (!isNaN(val)) {
+                    const elem = document.getElementById('soundLevel');
+                    elem.innerText = val;
+                    elem.style.color = (val > currentThresholdVal) ? "var(--neon-red)" : "var(--neon-green)";
+                    elem.style.textShadow = (val > currentThresholdVal) ? "0 0 15px var(--neon-red)" : "0 0 15px var(--neon-green)";
+                    updateChart(val);
+                }
+            });
+
+            database.ref('threshold').on('value', (snapshot) => {
+                const val = Number(snapshot.val());
+                if (!isNaN(val)) {
+                    currentThresholdVal = val;
+                    document.getElementById('currentThreshold').innerText = val;
+                }
+            });
+        }
+
+        function updateThreshold() {
+            const val = document.getElementById('newThreshold').value;
+            if(!val) return alert("กรุณากรอกตัวเลขเดซิเบล");
+            
+            database.ref('threshold').set(parseInt(val))
+            .then(() => {
+                alert("อัปเดตเกณฑ์แจ้งเตือนเรียบร้อยแล้ว!");
+                document.getElementById('newThreshold').value = '';
+            })
+            .catch(err => alert("เกิดข้อผิดพลาดในการบันทึก: " + err.message));
+        }
+
+        // 5. Table Updates & CSV Export
+        function initHistoryTable() {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = "";
+            const currentHour = new Date().getHours();
+            
+            timeSlots.forEach((slot, index) => {
+                const slotHour = 8 + index;
+                let dbVal = "--";
+                let statusHtml = `<span class="status-idle">ยังไม่ถึงเวลา</span>`;
+                
+                if (currentHour >= slotHour) {
+                    dbVal = hourlyDataHistory[slot] || "--";
+                    if (dbVal !== "--") {
+                        statusHtml = (dbVal > currentThresholdVal) 
+                            ? `<span class="status-warn">⚠️ เสียงดังเกินเกณฑ์</span>` 
+                            : `<span class="status-normal">✓ ปกติ</span>`;
+                    } else {
+                        statusHtml = `<span class="status-idle">กำลังบันทึก</span>`;
+                    }
+                }
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family: 'Orbitron';">${slot}</td>
+                    <td style="font-family: 'Orbitron'; color: var(--neon-blue);">${dbVal}</td>
+                    <td>${statusHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateChart(dbValue) {
+            const timeLabel = new Date().toLocaleTimeString('th-TH');
+            soundChart.data.labels.push(timeLabel);
+            soundChart.data.datasets[0].data.push(dbValue);
+            
+            if (soundChart.data.labels.length > 40) {
+                soundChart.data.labels.shift();
+                soundChart.data.datasets[0].data.shift();
+            }
+            soundChart.update();
+
+            const hourNow = new Date().getHours();
+            if (hourNow >= 8 && hourNow < 18) {
+                const slotIndex = hourNow - 8;
+                const slotName = timeSlots[slotIndex];
+                hourlyDataHistory[slotName] = dbValue;
+                initHistoryTable();
+            }
+        }
+
+        function exportToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "Time Slot,Average Sound Level (dB),Status\n";
+            timeSlots.forEach(slot => {
+                const val = hourlyDataHistory[slot] || "N/A";
+                let status = "ยังไม่ถึงเวลา";
+                if(val !== "N/A") {
+                    status = val > currentThresholdVal ? "เสียงดังเกินเกณฑ์" : "ปกติ";
+                }
+                csvContent += `"${slot}","${val}","${status}"\n`;
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Sound_Report_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
