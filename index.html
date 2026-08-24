@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SoundGuard - Daily History IoT Dashboard</title>
-    <!-- Google Fonts, Chart.js & Firebase SDK (App, Database, Auth) -->
+    <!-- Google Fonts, Chart.js & Firebase SDK -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -186,6 +186,17 @@
             transition: 0.3s;
         }
         .btn-export:hover { background: var(--neon-blue); color: #000; }
+        .btn-test {
+            background: rgba(255, 204, 0, 0.15);
+            border: 1px solid var(--neon-yellow);
+            color: var(--neon-yellow);
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: 0.3s;
+        }
+        .btn-test:hover { background: var(--neon-yellow); color: #000; }
         @media (max-width: 768px) {
             header { flex-direction: column; gap: 10px; }
             .container { grid-template-columns: 1fr; }
@@ -217,7 +228,10 @@
     <div class="container">
         <!-- Real-time Sound Display -->
         <div class="card">
-            <h3>ระดับเสียงปัจจุบัน (REAL-TIME)</h3>
+            <h3>
+                <span>ระดับเสียงปัจจุบัน (REAL-TIME)</span>
+                <button class="btn-test" onclick="simulateSoundData()">⚡ ทดสอบส่งค่าเสียง</button>
+            </h3>
             <div class="display-val" id="soundLevel">--</div>
             <p style="color: #64748b;">หน่วยวัด: เดซิเบล (dB)</p>
         </div>
@@ -276,8 +290,8 @@
         let currentThresholdVal = 85;
         const timeSlots = [
             "08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00",
-            "12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00", "15:00 - 16:00",
-            "16:00 - 17:00", "17:00 - 18:00"
+            "12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00", "16:00 - 17:00",
+            "17:00 - 18:00"
         ];
         let hourlyDataHistory = {};
 
@@ -339,13 +353,14 @@
                 document.getElementById('password').value = '';
                 
                 database.ref('classroom_sound/sound_level').off();
+                database.ref('sound_level').off();
                 database.ref('classroom_sound/threshold').off();
             });
         }
 
-        // 4. Firebase Realtime Data Listener (ปรับปรุงการดึงค่าและการแปลงตัวเลขให้ครอบคลุม)
+        // 4. Multi-path Listener (ตรวจจับอัตโนมัติทั้งแบบซ้อนโฟลเดอร์และแบบหน้าแรก)
         function listenFirebaseData() {
-            database.ref('classroom_sound/sound_level').on('value', (snapshot) => {
+            const handleSoundVal = (snapshot) => {
                 const rawVal = snapshot.val();
                 if (rawVal !== null && rawVal !== undefined) {
                     const val = parseFloat(rawVal);
@@ -357,8 +372,14 @@
                         updateChart(val);
                     }
                 }
-            });
+            };
 
+            // ดึงจาก classroom_sound/sound_level
+            database.ref('classroom_sound/sound_level').on('value', handleSoundVal);
+            // สำรอง: ดึงจาก sound_level หน้าแรก
+            database.ref('sound_level').on('value', handleSoundVal);
+
+            // ดึงเกณฑ์แจ้งเตือน
             database.ref('classroom_sound/threshold').on('value', (snapshot) => {
                 const rawVal = snapshot.val();
                 if (rawVal !== null && rawVal !== undefined) {
@@ -375,12 +396,20 @@
             const val = document.getElementById('newThreshold').value;
             if(!val) return alert("กรุณากรอกตัวเลขเดซิเบล");
             
-            database.ref('classroom_sound/threshold').set(parseInt(val))
+            const numVal = parseInt(val);
+            database.ref('classroom_sound/threshold').set(numVal)
             .then(() => {
+                database.ref('threshold').set(numVal); // อัปเดตสำรอง
                 alert("อัปเดตเกณฑ์แจ้งเตือนเรียบร้อยแล้ว!");
                 document.getElementById('newThreshold').value = '';
             })
             .catch(err => alert("เกิดข้อผิดพลาดในการบันทึก: " + err.message));
+        }
+
+        // ฟังก์ชันกดปุ่มสุ่มค่าเสียงทดสอบ (จะส่งขึ้น Firebase จริงๆ)
+        function simulateSoundData() {
+            const randomDb = Math.floor(Math.random() * (95 - 55 + 1)) + 55;
+            database.ref('classroom_sound/sound_level').set(randomDb);
         }
 
         // 5. Table Updates & CSV Export
@@ -430,8 +459,10 @@
             if (hourNow >= 8 && hourNow < 18) {
                 const slotIndex = hourNow - 8;
                 const slotName = timeSlots[slotIndex];
-                hourlyDataHistory[slotName] = dbValue.toFixed(0);
-                initHistoryTable();
+                if(slotName) {
+                    hourlyDataHistory[slotName] = dbValue.toFixed(0);
+                    initHistoryTable();
+                }
             }
         }
 
