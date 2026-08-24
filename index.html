@@ -343,24 +343,30 @@
             });
         }
 
-        // 4. Firebase Realtime Data Listener (ปรับปรุง Path เป็น classroom_sound/)
+        // 4. Firebase Realtime Data Listener (ปรับปรุงการดึงค่าและการแปลงตัวเลขให้ครอบคลุม)
         function listenFirebaseData() {
             database.ref('classroom_sound/sound_level').on('value', (snapshot) => {
-                const val = Number(snapshot.val());
-                if (!isNaN(val)) {
-                    const elem = document.getElementById('soundLevel');
-                    elem.innerText = val;
-                    elem.style.color = (val > currentThresholdVal) ? "var(--neon-red)" : "var(--neon-green)";
-                    elem.style.textShadow = (val > currentThresholdVal) ? "0 0 15px var(--neon-red)" : "0 0 15px var(--neon-green)";
-                    updateChart(val);
+                const rawVal = snapshot.val();
+                if (rawVal !== null && rawVal !== undefined) {
+                    const val = parseFloat(rawVal);
+                    if (!isNaN(val)) {
+                        const elem = document.getElementById('soundLevel');
+                        elem.innerText = val.toFixed(0);
+                        elem.style.color = (val > currentThresholdVal) ? "var(--neon-red)" : "var(--neon-green)";
+                        elem.style.textShadow = (val > currentThresholdVal) ? "0 0 15px var(--neon-red)" : "0 0 15px var(--neon-green)";
+                        updateChart(val);
+                    }
                 }
             });
 
             database.ref('classroom_sound/threshold').on('value', (snapshot) => {
-                const val = Number(snapshot.val());
-                if (!isNaN(val)) {
-                    currentThresholdVal = val;
-                    document.getElementById('currentThreshold').innerText = val;
+                const rawVal = snapshot.val();
+                if (rawVal !== null && rawVal !== undefined) {
+                    const val = parseFloat(rawVal);
+                    if (!isNaN(val)) {
+                        currentThresholdVal = val;
+                        document.getElementById('currentThreshold').innerText = val;
+                    }
                 }
             });
         }
@@ -414,7 +420,7 @@
             soundChart.data.labels.push(timeLabel);
             soundChart.data.datasets[0].data.push(dbValue);
             
-            if (soundChart.data.labels.length > 40) {
+            if (soundChart.data.labels.length > 30) {
                 soundChart.data.labels.shift();
                 soundChart.data.datasets[0].data.shift();
             }
@@ -424,7 +430,7 @@
             if (hourNow >= 8 && hourNow < 18) {
                 const slotIndex = hourNow - 8;
                 const slotName = timeSlots[slotIndex];
-                hourlyDataHistory[slotName] = dbValue;
+                hourlyDataHistory[slotName] = dbValue.toFixed(0);
                 initHistoryTable();
             }
         }
