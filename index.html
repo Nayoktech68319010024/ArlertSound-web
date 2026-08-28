@@ -236,8 +236,17 @@
             <p style="color: #64748b;">หน่วยวัด: เดซิเบล (dB)</p>
         </div>
 
-        <!-- Threshold Control -->
+        <!-- Average Sound Display (เพิ่มการ์ดแสดงค่าเฉลี่ยรวม) -->
         <div class="card">
+            <h3>
+                <span>ระดับเสียงเฉลี่ยสะสม (AVG SOUND)</span>
+            </h3>
+            <div class="display-val" id="avgSoundLevel" style="color: var(--neon-blue); text-shadow: 0 0 15px var(--neon-blue);">--</div>
+            <p style="color: #64748b;">คำนวณจากค่ารับเข้าทั้งหมด (dB)</p>
+        </div>
+
+        <!-- Threshold Control -->
+        <div class="card card-full">
             <h3>เกณฑ์แจ้งเตือน (THRESHOLD)</h3>
             <p style="margin-bottom: 10px;">ขีดจำกัดปัจจุบัน: <span id="currentThreshold" style="font-family: 'Orbitron'; color: var(--neon-blue); font-size: 1.2rem;">--</span> dB</p>
             <div class="input-group">
@@ -293,7 +302,13 @@
             "12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00", "15:00 - 16:00",
             "16:00 - 17:00", "17:00 - 18:00"
         ];
-        let hourlyDataHistory = {};
+        
+        // ตัวแปรสำหรับเก็บข้อมูลคำนวณค่าเฉลี่ยประจำช่วงเวลา
+        let hourlyDataHistory = {}; // เก็บผลรวม { "08:00 - 09:00": { sum: 150, count: 2 } }
+        
+        // ตัวแปรเก็บผลรวมระดับเสียงทั้งหมดเพื่อคำนวณค่าเฉลี่ยรวม (Overall Average)
+        let totalSoundSum = 0;
+        let totalSoundCount = 0;
 
         // 2. Chart.js Setup
         const ctx = document.getElementById('soundChart').getContext('2d');
@@ -366,7 +381,9 @@
                         elem.innerText = val.toFixed(0);
                         elem.style.color = (val > currentThresholdVal) ? "var(--neon-red)" : "var(--neon-green)";
                         elem.style.textShadow = (val > currentThresholdVal) ? "0 0 15px var(--neon-red)" : "0 0 15px var(--neon-green)";
+                        
                         updateChart(val);
+                        updateOverallAverage(val);
                     }
                 }
             };
@@ -407,7 +424,15 @@
             database.ref('classroom_sound/sound_level').set(randomDb);
         }
 
-        // 5. Table Updates & CSV Export
+        // 5. คำนวณค่าเฉลี่ยรวมทั้งหมด (Overall Average)
+        function updateOverallAverage(dbValue) {
+            totalSoundSum += dbValue;
+            totalSoundCount++;
+            const overallAvg = (totalSoundSum / totalSoundCount).toFixed(1);
+            document.getElementById('avgSoundLevel').innerText = overallAvg;
+        }
+
+        // 6. Table Updates & CSV Export (พร้อมคำนวณค่าเฉลี่ยรายชั่วโมง)
         function initHistoryTable() {
             const tbody = document.getElementById('historyTableBody');
             tbody.innerHTML = "";
@@ -419,8 +444,12 @@
                 let statusHtml = `<span class="status-idle">ยังไม่ถึงเวลา</span>`;
                 
                 if (currentHour >= slotHour) {
-                    dbVal = hourlyDataHistory[slot] || "--";
-                    if (dbVal !== "--") {
+                    const slotData = hourlyDataHistory[slot];
+                    if (slotData && slotData.count > 0) {
+                        // คำนวณค่าเฉลี่ยประจำช่วงเวลานั้นๆ
+                        const avgVal = slotData.sum / slotData.count;
+                        dbVal = avgVal.toFixed(1);
+
                         const numDb = parseFloat(dbVal);
                         statusHtml = (numDb > currentThresholdVal) 
                             ? `<span class="status-warn">⚠️ เสียงดังเกินเกณฑ์</span>` 
@@ -456,7 +485,13 @@
                 const slotIndex = hourNow - 8;
                 const slotName = timeSlots[slotIndex];
                 if(slotName) {
-                    hourlyDataHistory[slotName] = dbValue.toFixed(0);
+                    // สะสมค่าเสียงและนับจำนวนครั้งที่รับข้อมูลเข้ามา เพื่อใช้หารเฉลี่ย
+                    if (!hourlyDataHistory[slotName]) {
+                        hourlyDataHistory[slotName] = { sum: 0, count: 0 };
+                    }
+                    hourlyDataHistory[slotName].sum += dbValue;
+                    hourlyDataHistory[slotName].count += 1;
+                    
                     initHistoryTable();
                 }
             }
@@ -466,11 +501,15 @@
             let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
             csvContent += "Time Slot,Average Sound Level (dB),Status\n";
             timeSlots.forEach(slot => {
-                const val = hourlyDataHistory[slot] || "N/A";
+                const slotData = hourlyDataHistory[slot];
+                let val = "N/A";
                 let status = "ยังไม่ถึงเวลา";
-                if(val !== "N/A") {
+
+                if(slotData && slotData.count > 0) {
+                    val = (slotData.sum / slotData.count).toFixed(1);
                     status = parseFloat(val) > currentThresholdVal ? "เสียงดังเกินเกณฑ์" : "ปกติ";
                 }
+
                 csvContent += `"${slot}","${val}","${status}"\n`;
             });
             const encodedUri = encodeURI(csvContent);
