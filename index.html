@@ -13,15 +13,42 @@
 
     <style>
         :root {
+            /* Dark Theme Default Variables */
             --bg-color: #0b0f19;
+            --header-bg: rgba(11, 15, 25, 0.8);
             --card-bg: rgba(18, 26, 43, 0.7);
             --neon-blue: #00f3ff;
             --neon-green: #00ff66;
             --neon-red: #ff0055;
             --neon-yellow: #ffcc00;
             --text-color: #e2e8f0;
+            --title-color: #ffffff;
+            --subtext-color: #64748b;
+            --border-color: rgba(0, 243, 255, 0.2);
+            --input-bg: rgba(255, 255, 255, 0.05);
+            --overlay-bg: rgba(11, 15, 25, 0.95);
+            --table-border: rgba(255, 255, 255, 0.05);
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
+
+        /* Light Theme Overrides */
+        body.light-mode {
+            --bg-color: #f1f5f9;
+            --header-bg: rgba(255, 255, 255, 0.85);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --neon-blue: #0284c7;      /* ปรับเป็นสีฟ้าเข้มเพื่อความชัดเจน */
+            --neon-green: #16a34a;     /* ปรับเป็นสีเขียวเข้ม */
+            --neon-red: #dc2626;       /* ปรับเป็นสีแดงเข้ม */
+            --neon-yellow: #d97706;    /* ปรับเป็นสีส้ม/เหลืองเข้ม */
+            --text-color: #1e293b;
+            --title-color: #0f172a;
+            --subtext-color: #64748b;
+            --border-color: rgba(2, 132, 199, 0.25);
+            --input-bg: rgba(0, 0, 0, 0.03);
+            --overlay-bg: rgba(241, 245, 249, 0.95);
+            --table-border: rgba(0, 0, 0, 0.08);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
@@ -37,7 +64,7 @@
         #loginOverlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(11, 15, 25, 0.95);
+            background: var(--overlay-bg);
             backdrop-filter: blur(15px);
             display: flex;
             justify-content: center;
@@ -52,22 +79,22 @@
             padding: 40px;
             width: 90%;
             max-width: 400px;
-            box-shadow: 0 0 25px rgba(0, 243, 255, 0.2);
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.15);
             text-align: center;
         }
         .login-box h2 {
             font-family: 'Orbitron', sans-serif;
-            color: #fff;
+            color: var(--title-color);
             margin-bottom: 25px;
             text-shadow: 0 0 10px var(--neon-blue);
         }
         .input-field {
             width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(0, 243, 255, 0.3);
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 12px;
-            color: #fff;
+            color: var(--text-color);
             font-size: 1rem;
             margin-bottom: 15px;
             outline: none;
@@ -81,7 +108,7 @@
             background: linear-gradient(45deg, #0088ff, var(--neon-blue));
             border: none;
             border-radius: 8px;
-            color: #000;
+            color: #fff;
             font-weight: 700;
             padding: 12px;
             cursor: pointer;
@@ -99,17 +126,17 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
-            background: rgba(11, 15, 25, 0.8);
+            border-bottom: 1px solid var(--border-color);
+            background: var(--header-bg);
             backdrop-filter: blur(10px);
         }
         header h1 {
             font-family: 'Orbitron', sans-serif;
             font-size: 1.4rem;
-            color: #fff;
+            color: var(--title-color);
             text-shadow: 0 0 10px var(--neon-blue);
         }
-        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-info { display: flex; align-items: center; gap: 12px; }
         .user-badge {
             font-size: 0.9rem;
             color: var(--neon-green);
@@ -118,8 +145,25 @@
             border-radius: 20px;
             border: 1px solid var(--neon-green);
         }
+        .theme-toggle-btn {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+        }
+        .theme-toggle-btn:hover {
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+        }
         .btn-logout {
-            background: rgba(255, 0, 85, 0.2);
+            background: rgba(255, 0, 85, 0.15);
             border: 1px solid var(--neon-red);
             color: var(--neon-red);
             padding: 6px 12px;
@@ -139,16 +183,16 @@
         }
         .card {
             background: var(--card-bg);
-            border: 1px solid rgba(0, 243, 255, 0.2);
+            border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 25px;
             backdrop-filter: blur(12px);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
         }
         .card-full { grid-column: span 2; }
         .card h3 {
             font-size: 0.95rem;
-            color: #94a3b8;
+            color: var(--subtext-color);
             margin-bottom: 15px;
             text-transform: uppercase;
             display: flex;
@@ -168,13 +212,13 @@
         .history-table th, .history-table td {
             padding: 10px;
             text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--table-border);
             font-size: 0.9rem;
         }
         .history-table th { color: var(--neon-blue); font-family: 'Orbitron', sans-serif; font-weight: 600; }
-        .status-normal { color: var(--neon-green); }
+        .status-normal { color: var(--neon-green); font-weight: 600; }
         .status-warn { color: var(--neon-red); font-weight: bold; }
-        .status-idle { color: #64748b; }
+        .status-idle { color: var(--subtext-color); }
         .btn-export {
             background: rgba(0, 243, 255, 0.1);
             border: 1px solid var(--neon-blue);
@@ -185,7 +229,7 @@
             font-size: 0.8rem;
             transition: 0.3s;
         }
-        .btn-export:hover { background: var(--neon-blue); color: #000; }
+        .btn-export:hover { background: var(--neon-blue); color: #fff; }
         .btn-test {
             background: rgba(255, 204, 0, 0.15);
             border: 1px solid var(--neon-yellow);
@@ -196,7 +240,7 @@
             font-size: 0.75rem;
             transition: 0.3s;
         }
-        .btn-test:hover { background: var(--neon-yellow); color: #000; }
+        .btn-test:hover { background: var(--neon-yellow); color: #fff; }
         @media (max-width: 768px) {
             header { flex-direction: column; gap: 10px; }
             .container { grid-template-columns: 1fr; }
@@ -219,6 +263,9 @@
     <header>
         <h1>SOUNDGUARD MONITOR</h1>
         <div class="user-info">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" id="themeBtn">
+                🌙 <span id="themeBtnText">Dark Mode</span>
+            </button>
             <span class="user-badge" id="currentTeacherText">ผู้สอน: --</span>
             <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
         </div>
@@ -233,16 +280,16 @@
                 <button class="btn-test" onclick="simulateSoundData()">⚡ ทดสอบส่งค่าเสียง</button>
             </h3>
             <div class="display-val" id="soundLevel">--</div>
-            <p style="color: #64748b;">หน่วยวัด: เดซิเบล (dB)</p>
+            <p style="color: var(--subtext-color);">หน่วยวัด: เดซิเบล (dB)</p>
         </div>
 
-        <!-- Average Sound Display (เพิ่มการ์ดแสดงค่าเฉลี่ยรวม) -->
+        <!-- Average Sound Display -->
         <div class="card">
             <h3>
                 <span>ระดับเสียงเฉลี่ยสะสม (AVG SOUND)</span>
             </h3>
             <div class="display-val" id="avgSoundLevel" style="color: var(--neon-blue); text-shadow: 0 0 15px var(--neon-blue);">--</div>
-            <p style="color: #64748b;">คำนวณจากค่ารับเข้าทั้งหมด (dB)</p>
+            <p style="color: var(--subtext-color);">คำนวณจากค่ารับเข้าทั้งหมด (dB)</p>
         </div>
 
         <!-- Threshold Control -->
@@ -303,10 +350,7 @@
             "16:00 - 17:00", "17:00 - 18:00"
         ];
         
-        // ตัวแปรสำหรับเก็บข้อมูลคำนวณค่าเฉลี่ยประจำช่วงเวลา
-        let hourlyDataHistory = {}; // เก็บผลรวม { "08:00 - 09:00": { sum: 150, count: 2 } }
-        
-        // ตัวแปรเก็บผลรวมระดับเสียงทั้งหมดเพื่อคำนวณค่าเฉลี่ยรวม (Overall Average)
+        let hourlyDataHistory = {}; 
         let totalSoundSum = 0;
         let totalSoundCount = 0;
 
@@ -338,7 +382,41 @@
             }
         });
 
-        // 3. Firebase Authentication Handlers
+        // 🟢 3. Dark/Light Theme Switching Logic
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            
+            // อัปเดตข้อความบนปุ่ม
+            document.getElementById('themeBtn').innerHTML = isLight ? '☀️ Light Mode' : '🌙 Dark Mode';
+            localStorage.setItem('soundguard_theme', isLight ? 'light' : 'dark');
+
+            // อัปเดตสีกราฟ Chart.js ตามธีม
+            updateChartTheme(isLight);
+        }
+
+        function updateChartTheme(isLight) {
+            const textColor = isLight ? '#1e293b' : '#e2e8f0';
+            const gridColor = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.05)';
+            const subTextColor = '#64748b';
+
+            soundChart.options.scales.x.grid.color = gridColor;
+            soundChart.options.scales.x.ticks.color = subTextColor;
+            soundChart.options.scales.y.grid.color = gridColor;
+            soundChart.options.scales.y.ticks.color = subTextColor;
+            soundChart.options.plugins.legend.labels.color = textColor;
+            soundChart.update();
+        }
+
+        // ดึงธีมเดิมที่เคยเซฟไว้
+        const savedTheme = localStorage.getItem('soundguard_theme');
+        if (savedTheme === 'light') {
+            document.body.classList.add('light-mode');
+            document.getElementById('themeBtn').innerHTML = '☀️ Light Mode';
+            updateChartTheme(true);
+        }
+
+        // 4. Firebase Authentication Handlers
         auth.onAuthStateChanged((user) => {
             if (user) {
                 document.getElementById('currentTeacherText').innerText = "ผู้สอน: " + user.email;
@@ -370,7 +448,7 @@
             });
         }
 
-        // 4. Multi-path Real-time Listener
+        // 5. Multi-path Real-time Listener
         function listenFirebaseData() {
             const handleSoundVal = (snapshot) => {
                 const rawVal = snapshot.val();
@@ -388,7 +466,6 @@
                 }
             };
 
-            // ดึงข้อมูล Realtime อัตโนมัติจาก Firebase
             database.ref('classroom_sound/sound_level').on('value', handleSoundVal);
             database.ref('sound_level').on('value', handleSoundVal);
 
@@ -424,7 +501,7 @@
             database.ref('classroom_sound/sound_level').set(randomDb);
         }
 
-        // 5. คำนวณค่าเฉลี่ยรวมทั้งหมด (Overall Average)
+        // 6. คำนวณค่าเฉลี่ยรวมทั้งหมด (Overall Average)
         function updateOverallAverage(dbValue) {
             totalSoundSum += dbValue;
             totalSoundCount++;
@@ -432,7 +509,7 @@
             document.getElementById('avgSoundLevel').innerText = overallAvg;
         }
 
-        // 6. Table Updates & CSV Export (พร้อมคำนวณค่าเฉลี่ยรายชั่วโมง)
+        // 7. Table Updates & CSV Export
         function initHistoryTable() {
             const tbody = document.getElementById('historyTableBody');
             tbody.innerHTML = "";
@@ -446,7 +523,6 @@
                 if (currentHour >= slotHour) {
                     const slotData = hourlyDataHistory[slot];
                     if (slotData && slotData.count > 0) {
-                        // คำนวณค่าเฉลี่ยประจำช่วงเวลานั้นๆ
                         const avgVal = slotData.sum / slotData.count;
                         dbVal = avgVal.toFixed(1);
 
@@ -485,7 +561,6 @@
                 const slotIndex = hourNow - 8;
                 const slotName = timeSlots[slotIndex];
                 if(slotName) {
-                    // สะสมค่าเสียงและนับจำนวนครั้งที่รับข้อมูลเข้ามา เพื่อใช้หารเฉลี่ย
                     if (!hourlyDataHistory[slotName]) {
                         hourlyDataHistory[slotName] = { sum: 0, count: 0 };
                     }
